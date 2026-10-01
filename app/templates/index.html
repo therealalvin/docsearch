@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Vault - Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 p-6 min-h-screen">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Document Vault</h1>
+                <p class="text-sm text-slate-500">Search, filter, and structure-exclude indexed documents</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="sync-status-badge" class="text-xs px-3 py-1.5 rounded-lg font-medium border border-slate-200 bg-slate-100 text-slate-600 transition">
+                    Checking sync...
+                </span>
+                <a href="/tags" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition">
+                    Manage Tags
+                </a>
+                <a href="/sync" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition flex items-center gap-1.5">
+                    ↻ Sync Documents
+                </a>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+
+            <!-- Sidebar -->
+            <div class="lg:w-80 shrink-0 space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4 sticky top-6">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h2 class="font-bold text-slate-900 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🚫 Hidden Layouts</span>
+                            <span class="bg-rose-100 text-rose-800 text-xs px-2 py-0.5 rounded-full font-bold">
+                                {{ excluded_items|length }}
+                            </span>
+                        </h2>
+                        {% if excluded_items %}
+                            <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}&limit={{ limit }}&exclude=" 
+                               class="text-xs text-slate-400 hover:text-rose-600 font-medium transition">
+                                Clear All
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    {% if excluded_items %}
+                        <div class="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1">
+                            {% for ex_item in excluded_items %}
+                                <div class="flex items-center justify-between p-2.5 rounded-lg bg-rose-50/70 border border-rose-100 hover:border-rose-200 transition group">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <img src="/thumbnails/{{ ex_item.id }}.jpg" 
+                                             class="w-9 h-11 object-cover object-top rounded border border-rose-200 shrink-0 bg-white"
+                                             onerror="this.style.display='none'">
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-semibold text-slate-800 truncate" title="{{ ex_item.filename }}">
+                                                {{ ex_item.filename }}
+                                            </p>
+                                            <p class="text-[10px] text-rose-600 font-medium">Layout Group Hidden</p>
+                                        </div>
+                                    </div>
+                                    <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}&limit={{ limit }}&exclude={{ ex_item.remove_exclude_str }}"
+                                       class="text-slate-400 hover:text-rose-700 hover:bg-rose-100 p-1.5 rounded-md font-bold text-xs transition">
+                                        ✕
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100">
+                            <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}&limit={{ limit }}&exclude={{ undo_exclude }}"
+                               class="block w-full text-center bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold py-2 rounded-lg transition">
+                                ↩ Undo Last Hide
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="p-4 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center space-y-1">
+                            <p class="text-xs font-semibold text-slate-600">No Document Layouts Hidden</p>
+                            <p class="text-[11px] text-slate-400">Click <strong>🚫 Hide Similar Layout</strong> on any document card to hide all forms sharing that layout structure.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div class="flex-1 space-y-6">
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                    <form method="GET" action="/" id="search-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+                        <input type="hidden" name="exclude" value="{{ exclude }}">
+
+                        <!-- Query & Fuzzy Toggle -->
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Keywords</label>
+                            <div class="flex flex-col gap-2">
+                                <input type="text" name="q" value="{{ query }}" placeholder="Search text..."  
+                                       class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" name="fuzzy" value="true" {% if is_fuzzy %}checked{% endif %} class="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                    <span class="text-[11px] font-medium text-slate-500">Allow Fuzzy Search (Typo Tolerance)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Tag -->
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Tag Filter</label>
+                            <select name="tag" onchange="this.form.submit()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="">All Tags</option>
+                                {% for tag_item in all_tags %}
+                                    <option value="{{ tag_item.tag_name }}" {% if selected_tag == tag_item.tag_name %}selected{% endif %}>
+                                        #{{ tag_item.tag_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Doc Date</label>
+                            <select name="date_range" id="date_range_select" onchange="handleDateRangeChange(this)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="all" {% if date_range == 'all' or not date_range %}selected{% endif %}>All Dates</option>
+                                <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                                <option value="ytd" {% if date_range == 'ytd' %}selected{% endif %}>YTD</option>
+                                <option value="last_year" {% if date_range == 'last_year' %}selected{% endif %}>Last Year</option>
+                                <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom...</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort -->
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Sort By</label>
+                            <select name="sort" onchange="this.form.submit()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="doc_date:desc" {% if sort == 'doc_date:desc' %}selected{% endif %}>Date (Newest)</option>
+                                <option value="doc_date:asc" {% if sort == 'doc_date:asc' %}selected{% endif %}>Date (Oldest)</option>
+                                <option value="filename:asc" {% if sort == 'filename:asc' %}selected{% endif %}>Filename (A-Z)</option>
+                                <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Relevance</option>
+                            </select>
+                        </div>
+
+                        <!-- Limit -->
+                        <div class="lg:col-span-1">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Limit</label>
+                            <select name="limit" onchange="this.form.submit()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="10" {% if limit == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if limit == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+                            </select>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="lg:col-span-2 flex items-start gap-2 pt-[18px]">
+                            <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium transition">
+                                Search
+                            </button>
+                            {% if query or selected_tag or (date_range and date_range != 'all') or exclude %}
+                                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center">✕</a>
+                            {% endif %}
+                        </div>
+
+                        <!-- Custom Dates -->
+                        <div id="custom_date_container" class="lg:col-span-12 {% if date_range != 'custom' %}hidden{% endif %} pt-3 mt-1 border-t border-slate-100 flex flex-wrap items-center gap-4">
+                            <span class="text-xs font-semibold text-slate-500 uppercase">🗓 Custom Range:</span>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-medium text-slate-600">From</label>
+                                <input type="date" name="start_date" value="{{ start_date }}" class="border border-slate-300 rounded-lg p-2 text-xs bg-white">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-medium text-slate-600">To</label>
+                                <input type="date" name="end_date" value="{{ end_date }}" class="border border-slate-300 rounded-lg p-2 text-xs bg-white">
+                            </div>
+                            <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">Apply</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="flex justify-between items-center text-xs text-slate-500 px-1">
+                    {% if total_hits > 0 %}
+                        <p>Showing <span class="font-semibold text-slate-700">{{ start_index }}–{{ end_index }}</span> of <span class="font-semibold text-slate-700">{{ total_hits }}</span> documents</p>
+                    {% else %}
+                        <p>No documents found</p>
+                    {% endif %}
+                </div>
+
+                {% if results %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {% for doc in results %}
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition group">
+                                <div>
+                                    <a href="/pdf/{{ doc.id }}" target="_blank" class="block h-48 bg-slate-100 relative overflow-hidden">
+                                        <img src="/thumbnails/{{ doc.id }}.jpg" alt="{{ doc.filename }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition duration-200" onerror="this.onerror=null; this.parentElement.classList.add('flex','items-center','justify-center'); this.parentElement.innerHTML='<span class=\"text-slate-400 text-xs font-semibold uppercase\">PDF Document</span>';">
+                                    </a>
+                                    <div class="p-4 space-y-2">
+                                        <h3 class="font-semibold text-slate-900 text-sm truncate" title="{{ doc.filename }}">
+                                            <a href="/pdf/{{ doc.id }}" target="_blank" class="hover:text-indigo-600 transition">{{ doc.filename }}</a>
+                                        </h3>
+                                        <p class="text-xs text-slate-500 flex items-center gap-1">
+                                            {% if doc.doc_date %}📅 {{ doc.doc_date }}{% else %}<span class="italic text-slate-400">No Date Detected</span>{% endif %}
+                                        </p>
+                                        {% if doc.tags %}
+                                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                                {% for t in doc.tags %}
+                                                    <a href="/?tag={{ t }}&exclude={{ exclude }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}" class="inline-block bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-0.5 rounded-full transition">#{{ t }}</a>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="p-4 pt-0 space-y-2">
+                                    <a href="/pdf/{{ doc.id }}" target="_blank" class="block w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium py-2 rounded-lg transition">View Document</a>
+                                    {% set new_exclude = (exclude + ',' + doc.id) if exclude else doc.id %}
+                                    <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}&limit={{ limit }}&exclude={{ new_exclude }}" 
+                                       class="block w-full text-center border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium py-1.5 rounded-lg transition">
+                                        🚫 Hide Similar Layout
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if total_pages > 1 %}
+                        <div class="flex justify-center items-center gap-2 pt-4">
+                            {% if page > 1 %}
+                                <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}&limit={{ limit }}&exclude={{ exclude }}&page={{ page - 1 }}"  
+                                   class="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">← Previous</a>
+                            {% endif %}
+                            <span class="text-xs text-slate-500 px-3">Page <strong class="text-slate-800">{{ page }}</strong> of <strong class="text-slate-800">{{ total_pages }}</strong></span>
+                            {% if page < total_pages %}
+                                <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}&limit={{ limit }}&exclude={{ exclude }}&page={{ page + 1 }}"  
+                                   class="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">Next →</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="bg-white p-12 rounded-xl shadow-sm border border-slate-200 text-center space-y-3">
+                        <div class="text-3xl">🔍</div>
+                        <h3 class="text-lg font-semibold text-slate-800">No Documents Found</h3>
+                        <p class="text-sm text-slate-500 max-w-md mx-auto">Try adjusting your search query, clearing date or layout exclusions, or running a fresh sync.</p>
+                        <div class="flex justify-center gap-3 pt-2">
+                            {% if exclude %}
+                                <a href="/?q={{ query }}&fuzzy={{ 'true' if is_fuzzy else 'false' }}&tag={{ selected_tag }}&exclude=" class="bg-rose-100 hover:bg-rose-200 text-rose-800 px-4 py-2 rounded-lg font-medium text-sm transition">Clear Layout Exclusions</a>
+                            {% endif %}
+                            <a href="/sync" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition">↻ Sync Documents Now</a>
+                        </div>
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+    <script>
+        function handleDateRangeChange(selectEl) {
+            const customContainer = document.getElementById('custom_date_container');
+            if (selectEl.value === 'custom') customContainer.classList.remove('hidden');
+            else { customContainer.classList.add('hidden'); selectEl.form.submit(); }
+        }
+        async function pollSyncStatus() {
+            const badge = document.getElementById('sync-status-badge');
+            if (!badge) return;
+            try {
+                const res = await fetch('/api/sync-status');
+                const data = await res.json();
+                if (data.is_syncing) {
+                    badge.className = 'text-xs px-3 py-1.5 rounded-lg font-medium border border-amber-200 bg-amber-50 text-amber-700 animate-pulse';
+                    badge.innerHTML = '⚡ Syncing...';
+                    setTimeout(pollSyncStatus, 1500);
+                } else if (data.last_sync) {
+                    badge.className = 'text-xs px-3 py-1.5 rounded-lg font-medium border border-emerald-200 bg-emerald-50 text-emerald-700';
+                    badge.innerHTML = '✓ Synced at ' + data.last_sync;
+                    setTimeout(pollSyncStatus, 8000);
+                } else {
+                    badge.className = 'text-xs px-3 py-1.5 rounded-lg font-medium border border-slate-200 bg-slate-100 text-slate-600';
+                    badge.innerHTML = 'Idle';
+                    setTimeout(pollSyncStatus, 8000);
+                }
+            } catch (e) { setTimeout(pollSyncStatus, 10000); }
+        }
+        document.addEventListener('DOMContentLoaded', pollSyncStatus);
+    </script>
+</body>
+</html>

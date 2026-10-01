@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  web:
+    build: 
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: doc_search_app
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount application code for live updating without rebuilding
+      - ./app:/app
+      # Mount persistent storage for DB and thumbnails
+      - ./data:/data
+      # Mount read-only PDF directories with your documents, have as many as you want:
+      - /path/to/documents1/:/data/documents:ro
+      - /path/to/documents2/:/data/documents1:ro
+      - /path/to/documents3/:/data/documents3:ro
+    environment:
+      - MEILI_HTTP_ADDR=http://meilisearch:7700
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - meilisearch
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: doc_search_engine
+    environment:
+# if you change this, change it where it occurs in the source code, grep is your friend
+      - MEILI_MASTER_KEY=thisismymasterkeydontloseit123456
+    volumes:
+      - ./data/meili_data:/meili_data
+    ports:
+      - "7700:7700"
