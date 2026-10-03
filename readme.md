@@ -1,19 +1,46 @@
-# DocSearch 🔍📖
+# 📄 Local Document Search Vault
 
-Welcome to **DocSearch**, a containerized search solution designed to make PDF documents effortless to search, index, and navigate.
+A high-performance, self-hosted document search engine and intelligence vault designed for fast indexing, advanced filtering, and automated metadata tagging of local PDF libraries. Built with **FastAPI**, **Meilisearch**, **SQLite**, and **PyMuPDF**.
 
-## What It Does
+![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg)
+![Meilisearch](https://img.shields.io/badge/Meilisearch-latest-283fc3.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-* **Smart Documentation Indexing:** Processes and indexes OCR'd PDF files so that users can find specific topics instantly.
-* **Tagging Feature:** Organizes and filters search results using custom tags, making it easy to categorize and locate specific documents or sections by topic.
-* **Lightweight & Fast:** Built for speed, allowing quick lookup across your documentation stack.
-* **Dockerized Setup:** Fully containerized for easy deployment without manual dependency management.
+---
 
-## How It Works
+## ✨ Key Features
 
-1. **Ingestion & Parsing:** The application ingests your PDF sources.
-2. **Tagging & Index Generation:** It associates content with custom tags and builds an internal search index mapping keywords and snippets to their corresponding source documents.
-3. **Query Interface:** Exposes a clean interface/API where users can search, filter by tags, and retrieve matching document sections in real-time.
+* **⚡ Blazing Fast Full-Text Search:** Powered by Meilisearch with support for exact phrase matching, boolean operators (`AND`, `OR`), and optional fuzzy search toggles.
+* **🏷️ Dynamic Rule-Based Tagging:** Define keyword rules with exact or fuzzy matching. Saving or deleting rules instantly triggers cached re-evaluation across your entire library without rescanning disk storage.
+* **👁️ Visual Layout Similarity Filtering:** Generates grayscale layout vector embeddings from document thumbnails, allowing you to filter out or exclude visually repetitive document templates.
+* **📅 Advanced Date Filtering:** Filter documents instantly by predefined ranges (Year-to-Date, Last Month, Last Year) or custom date pickers.
+* **🔄 Asynchronous Background Delta-Sync:** Scans your local directories for new or deleted files in a background worker thread, keeping SQLite and Meilisearch perfectly synchronized.
+* **📄 In-Browser PDF Viewing:** Securely serves original PDFs and generates thumbnail previews on the fly.
+
+---
+## 🛠️ Tech Stack
+
+* **Backend & API:** Python, FastAPI, Uvicorn
+* **Search Engine:** Meilisearch (Rust-backed)
+* **Metadata & Caching:** SQLite (with WAL mode enabled for concurrent reads/writes)
+* **PDF Processing & Vision:** PyMuPDF (`fitz`), Pillow, NumPy
+* **Frontend:** Server-side rendered HTML templates (Jinja2) with responsive layouts
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+* Docker & Docker Compose (Recommended)
+* Python 3.11+ (if running locally)
+
+### Running with Docker Compose
+1. Clone the repository and navigate to your project directory.
+2. Place your PDF documents into your designated documents folder (e.g., `./documents`).
+3. Spin up the containers:
+   ```bash
+   docker-compose up --build
 
 ## How to Run It
 
